@@ -1,32 +1,46 @@
-import java.util.ArrayList;
 import java.util.Comparator;
 
-public class BookCopy extends Book {
-    public int book_copy_id;
-    public int rack_id;
-    public BookCopy(int book_id, String title, ArrayList<String> authors, ArrayList<String> publishers,int book_copy_id,int rack_id)
-    {
-        super(book_id,title,authors,publishers);
+//ThreadSafe
+public class BookCopy implements Comparable<BookCopy> {
+    private final Integer book_id;
+    private final Integer book_copy_id;
+    private final Integer rack_id;
+    private Boolean available;
+
+    public BookCopy(Integer book_id, Integer book_copy_id, Integer rack_id, Boolean available) {
+        this.book_id = book_id;
         this.book_copy_id = book_copy_id;
         this.rack_id = rack_id;
+        this.available = available;
     }
 
-    public void printDetails()
-    {
-        System.out.println("BookCopyId:"+book_copy_id);
-        super.printDetails();
-        System.out.println("Rack_no:"+rack_id);
+    public void printDetails() {
+        System.out.println("BookCopyId:" + book_copy_id);
+        System.out.println("Rack_no:" + rack_id);
     }
 
-    public static Comparator<BookCopy> getCompByRack()
-    {
-        Comparator comp = new Comparator<BookCopy>(){
-            @Override
-            public int compare(BookCopy book1, BookCopy book2)
-            {
-                return book1.rack_id-book2.rack_id;
-            }
-        };
-        return comp;
+    public int getRack_id() {
+        return rack_id;
+    }
+
+    public Integer getBook_copy_id() {
+        return book_copy_id;
+    }
+
+    public Integer getBook_id() {
+        return book_id;
+    }
+
+    public Boolean getAvailable() {
+        return available;
+    }
+
+    public void setAvailable(Boolean available) {
+        this.available = available;
+    }
+
+    @Override
+    public int compareTo(BookCopy a) {
+        return Integer.compare(this.rack_id, a.getRack_id());
     }
 }

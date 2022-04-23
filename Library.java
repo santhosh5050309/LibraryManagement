@@ -1,185 +1,167 @@
-import org.omg.PortableInterceptor.INACTIVE;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import java.lang.reflect.Array;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 
-public class Library implements ILibrary{
+public class Library implements ILibrary {
 
-    public ArrayList<Integer> rack;
-    public int free;
-    public int free_slots;
-    public TreeMap<Integer,ArrayList<Integer>> mapOfBooks; // book_id to book_copies
-    public HashMap<Integer,Integer> mapOfBooksToRack;
-    public HashMap<Integer,Integer> mapOfBookCopyToBookId;
-    public HashMap<Integer,BookCopy> globalBookCopyInfo;
-    private int size;
-    private HashMap<Integer,UserBookInfo> mapOfUserBookInfo;
-    private int maxBorrowLimit;
+    // Should replace with Rack class
+    private final Map<Integer, Integer> rackMap;
+    private Integer free_slots;
+    private Integer firstFreeRack = 0;
+    private final Map<Integer, Book> mapOfBookIdBook = new HashMap<>();
+    private final Map<Integer, UserBookInfo> mapOfUserBookInfo = new HashMap<>();
+    private final Map<Integer, Integer> invertedIndexofBookCopyIdBookId = new HashMap<>();
+    private final Integer maxBorrowLimit = 5;
+    private final Integer rackCapacity;
+    private final Integer numRacks;
 
-    Library(int size)
-    {
-        this.size =size;
-        this.free_slots = size;
-        rack = new ArrayList<>(size);
-        for(int i=0;i<size;i++)
-        {
-            rack.add(i,i+1);
-        }
-        this.free=0;
-        maxBorrowLimit = 5;
-        mapOfBooks = new TreeMap<>();
-        mapOfBooksToRack = new HashMap<>();
-        mapOfBookCopyToBookId = new HashMap<>();
-        globalBookCopyInfo = new HashMap<>();
-        mapOfUserBookInfo = new HashMap<>();
+    public Library(Integer numRacks, Integer rackCapacity) {
+        this.rackCapacity = rackCapacity;
+        this.numRacks = numRacks;
+        this.free_slots = numRacks*rackCapacity;
+        rackMap = new HashMap<>(numRacks);
     }
 
-    private int getRack()
-    {
-        if(free == size)
-        {
-            return -1;
+    private Integer getRack() throws Exception {
+        if (free_slots.equals(0)) {
+            throw new Exception("Out of capacity");
         }
-        int rack_no = free;
-        this.free = rack.get(free);
-        return rack_no;
-    }
 
-    @Override
-    public void addBook(int book_id, String title, ArrayList<String> authors, ArrayList<String> publishers, ArrayList<Integer> book_copy_ids) {
-
-        if (free_slots < book_copy_ids.size())
-        {
-            System.out.println("Rack not available");
+        if(rackMap.get(firstFreeRack).equals(rackCapacity)) {
+            firstFreeRack++;
         }
-        else
-        {
-            if (mapOfBooks.containsKey(book_id)) {
-                ArrayList<Integer> copies = mapOfBooks.get(book_id);
-                copies.addAll(book_copy_ids);
-                mapOfBooks.put(book_id, copies);
-            }
-            else {
-                mapOfBooks.put(book_id,book_copy_ids);
-            }
-            for(Integer copy : book_copy_ids)
-            {
-                int free_rack = getRack();
-                mapOfBooksToRack.put(copy,free_rack);
-                mapOfBookCopyToBookId.put(copy,book_id);
-                this.free_slots--;
-                globalBookCopyInfo.put(copy,new BookCopy(book_id,title,authors,publishers,copy,free_rack));
 
-            }
-        }
+        rackMap.put(firstFreeRack, rackMap.get(firstFreeRack)+1);
+        free_slots--;
+        return firstFreeRack;
     }
 
     @Override
-    public void removeBookCopy(int book_copy_id) {
-        if(!mapOfBookCopyToBookId.containsKey(book_copy_id))
-        {
+    public void addBook(Integer book_id, String title, List<String> authors, List<String> publishers,
+                        List<Integer> book_copy_ids) throws Exception {
+
+        if (free_slots < book_copy_ids.size()) {
+            throw new IllegalStateException("Out of free slots");
+        } else {
+            if (!mapOfBookIdBook.containsKey(book_id)) {
+                mapOfBookIdBook.put(book_id, new Book(book_id, title, authors, publishers));
+            }
+            Book book = mapOfBookIdBook.get(book_id);
+            for (Integer book_copy : book_copy_ids) {
+                // Lets assume book_copy_ids are always unique
+                if(!book.getBookCopies().containsKey(book_copy)) {
+                    Integer free_rack = getRack();
+                    this.free_slots--;
+                    book.addBookCopy(book.getBook_id(), book_copy, free_rack);
+                    invertedIndexofBookCopyIdBookId.put(book_copy, book_id);
+                }
+            }
+        }
+    }
+
+    /*
+    @Override
+    public void removeBookCopy(Integer book_copy_id) {
+        if (!invertedIndexofBookCopyIdBookId.containsKey(book_copy_id)) {
             System.out.println("Invalid Book Copy ID");
-        }
-        else
-        {
-            int index_to_rack = mapOfBooksToRack.get(book_copy_id);
-            mapOfBooksToRack.remove(book_copy_id);
-            rack.set(index_to_rack,free);
-            free  = index_to_rack;
+        } else {
+            Book book = mapOfBookIdBook.get(invertedIndexofBookCopyIdBookId.get(book_copy_id));
+            BookCopy bookCopy = book.getBookCopies().get(book_copy_id);
+            Integer rackIndex = bookCopy.getRack_id();
+            mapOfUserBookInfo.values().forEach(userBookInfo -> {
+                if(userBookInfo.getMapOfBooksDueDate().containsKey(bookCopy)) {
+                    throw new IllegalStateException("User must return copy first");
+                }
+            });
+            //Free rack space
+            rackMap.put(rackIndex, rackMap.get(rackIndex) -1);
+            book.getBookCopies().remove(book_copy_id);
+            invertedIndexofBookCopyIdBookId.remove(book_copy_id);
             free_slots++;
-
-            int book_id = mapOfBookCopyToBookId.get(book_copy_id);
-            ArrayList<Integer> book_copies = mapOfBooks.get(book_id);
-            //Can be optimised with Doubly Linked list
-            mapOfBookCopyToBookId.remove(book_copy_id);
-            book_copies.remove(new Integer(book_copy_id));
-            mapOfBooks.put(book_id,book_copies);
-
-            globalBookCopyInfo.remove(book_copy_id);
         }
-    }
+    } */
 
     @Override
-    public void borrowBook(int book_id, int user_id, Date date) {
-        if(!mapOfUserBookInfo.containsKey(user_id))
-        {
-            mapOfUserBookInfo.put(user_id,new UserBookInfo());
+    public void borrowBook(Integer book_id, Integer user_id, Date date) throws Exception {
+        if (!mapOfUserBookInfo.containsKey(user_id)) {
+            mapOfUserBookInfo.put(user_id, new UserBookInfo());
         }
-        if(!mapOfBooks.containsKey(book_id))
-        {
-            System.out.println("Invalid Book ID");
-        }
-        else if(mapOfBooks.containsKey(book_id) && mapOfBooks.get(book_id).size() == 0)
-        {
-            System.out.println("Not available");
-        }
-        else if(mapOfUserBookInfo.get(user_id).getNumberOfBooks() == 5)
-        {
-            System.out.println("Overlimit");
-        }
-        else
-        {
+        if (!mapOfBookIdBook.containsKey(book_id)) {
+            throw new IllegalArgumentException("Invalid Book ID");
+        } else if (mapOfUserBookInfo.get(user_id).getNumberOfBooks().equals(maxBorrowLimit)) {
+            throw new Exception("Book borrow limit reached");
+        } else {
             UserBookInfo user = mapOfUserBookInfo.get(user_id);
-
-            int book_copy_id = mapOfBooks.get(book_id).get(0);
-
-            removeBookCopy(book_copy_id);
-            user.addBook(book_copy_id,date);
+            Book book = mapOfBookIdBook.get(book_id);
+            book.getBookCopies().forEach((integer, bookCopy) -> {
+                if(bookCopy.getAvailable()) {
+                    try {
+                        borrowBookCopy(bookCopy.getBook_copy_id(), user_id, date);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            throw new Exception("No Book Available");
         }
     }
 
     @Override
-    public void borrowBookCopy(int book_copy_id, int user_id, Date date) {
-        if(!mapOfBookCopyToBookId.containsKey(book_copy_id))
-        {
-            System.out.println("Invalid Book Copy ID");
+    public void borrowBookCopy(Integer book_copy_id, Integer user_id, Date date) throws Exception {
+        if (!mapOfUserBookInfo.containsKey(user_id)) {
+            mapOfUserBookInfo.put(user_id, new UserBookInfo());
         }
-        else if(mapOfUserBookInfo.get(user_id).getNumberOfBooks() == 5)
-        {
-            System.out.println("Overlimit");
-        }
-        else
-        {
+        if (!invertedIndexofBookCopyIdBookId.containsKey(book_copy_id)) {
+            throw new IllegalArgumentException("Invalid Book Copy ID");
+        } else if (mapOfUserBookInfo.get(user_id).getNumberOfBooks().equals(maxBorrowLimit)) {
+            throw new Exception("Book borrow limit reached");
+        } else {
+            Integer book_id = invertedIndexofBookCopyIdBookId.get(book_copy_id);
+            mapOfBookIdBook.get(book_id).getBookCopies().get(book_copy_id).setAvailable(false);
             UserBookInfo user = mapOfUserBookInfo.get(user_id);
-            removeBookCopy(book_copy_id);
-            user.addBook(book_copy_id,date);
+            user.addBook(mapOfBookIdBook.get(book_id).getBookCopies().get(book_copy_id), date);
         }
     }
 
     @Override
-    public void printBorrowed(int user_id) {
-        if(mapOfUserBookInfo.containsKey(user_id))
-        {
-            UserBookInfo user = mapOfUserBookInfo.get(user_id);
-            user.printBorrowedBooks();
+    public void printBorrowed(Integer user_id) {
+        if (mapOfUserBookInfo.containsKey(user_id)) {
+            mapOfUserBookInfo.get(user_id).printBorrowedBooks();
         }
     }
 
     @Override
-    public void returnBookCopy(int user_id,int book_copy_id) {
-        if(!globalBookCopyInfo.containsKey(book_copy_id))
-        {
-            System.out.println("Invalid Book Copy ID");
-        }
-        else
-        {
-            Book book = globalBookCopyInfo.get(book_copy_id);
-            addBook(book.book_id,book.title,book.authors, book.publishers, new ArrayList<>(Arrays.asList(book_copy_id)));
-            UserBookInfo user =  mapOfUserBookInfo.get(user_id);
-            user.returnBook(book_copy_id);
+    public void returnBookCopy(Integer user_id, Integer book_copy_id) {
+        if (!invertedIndexofBookCopyIdBookId.containsKey(book_copy_id)) {
+            throw new IllegalArgumentException("Invalid Book Copy ID");
+        } else {
+            Integer book_id = invertedIndexofBookCopyIdBookId.get(book_copy_id);
+            mapOfBookIdBook.get(book_id).getBookCopies().get(book_copy_id).setAvailable(true);
         }
     }
 
     @Override
-    public void searchByBookCopyId(int book_copy_id) {
-        if(globalBookCopyInfo.containsKey(book_copy_id))
-        {
-            globalBookCopyInfo.get(book_copy_id).printDetails();
-        }
+    public void searchByBookCopyId(Integer book_copy_id) {
+        mapOfBookIdBook.values().forEach(book -> {
+            if(book.getBookCopies().containsKey(book_copy_id)) {
+                book.printDetails();
+                book.getBookCopies().get(book_copy_id).printDetails();
+            }
+        });
     }
 
     @Override
-    public void searchByBookId(int book_id) {
+    public void searchByBookId(Integer book_id) {
+        throw new NotImplementedException();
         /*
         if(mapOfBooks.containsKey(book_id)){
             ArrayList<BookCopy> book_copies_list = new ArrayList<>();
@@ -199,87 +181,63 @@ public class Library implements ILibrary{
     }
 
     @Override
-    public void searchByAuthors(ArrayList<String> authors) {
-        ArrayList<BookCopy> book_copies_list = new ArrayList<>();
-        for(Map.Entry<Integer,ArrayList<Integer>> entry: mapOfBooks.entrySet())
-        {
-            int book_copy_id  =  entry.getValue().get(0);
-            BookCopy bookCopy =  globalBookCopyInfo.get(book_copy_id);
-            if(bookCopy.searchByAuthors(authors))
-            {
-                book_copies_list.add(bookCopy);
-            }
-        }
-
-        Collections.sort(book_copies_list,BookCopy.getCompByRack());
-        for(BookCopy bookCopy: book_copies_list)
-        {
-            bookCopy.printDetails();
-        }
-        System.out.println();
+    public void searchByAuthors(List<String> authors) {
+        genericSearch(authors, SearchType.AUTHORS);
     }
 
     @Override
-    public void searchByPublishers(ArrayList<String> publishers) {
-        ArrayList<BookCopy> book_copies_list = new ArrayList<>();
-        for(Map.Entry<Integer,ArrayList<Integer>> entry: mapOfBooks.entrySet())
-        {
-            int book_copy_id  =  entry.getValue().get(0);
-            BookCopy bookCopy =  globalBookCopyInfo.get(book_copy_id);
-            if(bookCopy.searchByPublishers(publishers))
-            {
-                book_copies_list.add(bookCopy);
-            }
-        }
-
-        Collections.sort(book_copies_list,BookCopy.getCompByRack());
-        for(BookCopy bookCopy: book_copies_list)
-        {
-            bookCopy.printDetails();
-        }
-        System.out.println();
+    public void searchByPublishers(List<String> publishers) {
+        genericSearch(publishers, SearchType.PUBLISHERS);
     }
 
 
     @Override
     public void searchByTitle(String title) {
+        genericSearch(Collections.singletonList(title), SearchType.TITLE);
+    }
 
+    @Override
+    public void searchByDueDate(Integer user_id, Date date) {
         ArrayList<BookCopy> book_copies_list = new ArrayList<>();
-        for(Map.Entry<Integer,ArrayList<Integer>> entry: mapOfBooks.entrySet())
-        {
-            int book_copy_id  =  entry.getValue().get(0);
-            BookCopy bookCopy =  globalBookCopyInfo.get(book_copy_id);
-            if(bookCopy.searchByTitle(title))
-            {
+        UserBookInfo userBookInfo = mapOfUserBookInfo.get(user_id);
+        Map<BookCopy, Date> mapOfBooksDueDate = userBookInfo.getMapOfBooksDueDate();
+        for (Map.Entry<BookCopy, Date> entry : mapOfBooksDueDate.entrySet()) {
+            if (entry.getValue().before(date) || entry.getValue().equals(date)) {
+                BookCopy bookCopy = entry.getKey();
                 book_copies_list.add(bookCopy);
             }
         }
 
-        Collections.sort(book_copies_list,BookCopy.getCompByRack());
-        for(BookCopy bookCopy: book_copies_list)
-        {
+        book_copies_list.sort(BookCopy::compareTo);
+        for (BookCopy bookCopy : book_copies_list) {
             bookCopy.printDetails();
         }
         System.out.println();
     }
 
-    @Override
-    public void searchByDueDate(int user_id,Date date) {
+    private void genericSearch(List<String> query, SearchType searchType) {
         ArrayList<BookCopy> book_copies_list = new ArrayList<>();
-        UserBookInfo userBookInfo = mapOfUserBookInfo.get(user_id);
-        TreeMap<Integer, Date> mapOfBooksDueDate = userBookInfo.mapOfBooksDueDate;
-        for(Map.Entry<Integer, Date> entry: mapOfBooksDueDate.entrySet())
-        {
-            if(entry.getValue().equals(date))
-            {
-                BookCopy bookCopy =  globalBookCopyInfo.get(entry.getKey());
-                book_copies_list.add(bookCopy);
+        mapOfBookIdBook.values().forEach(book ->  {
+            if(searchType.equals(SearchType.TITLE)) {
+                if (book.searchByTitle(query.get(0))) {
+                    book_copies_list.addAll(book.getBookCopies().values());
+                }
             }
-        }
 
-        Collections.sort(book_copies_list,BookCopy.getCompByRack());
-        for(BookCopy bookCopy: book_copies_list)
-        {
+            else if(searchType.equals(SearchType.AUTHORS)) {
+                if (book.searchByAuthors(query)) {
+                    book_copies_list.addAll(book.getBookCopies().values());
+                }
+            }
+
+            else if(searchType.equals(SearchType.PUBLISHERS)) {
+                if (book.searchByPublishers(query)) {
+                    book_copies_list.addAll(book.getBookCopies().values());
+                }
+            }
+        });
+        book_copies_list.sort(BookCopy::compareTo);
+        for (BookCopy bookCopy : book_copies_list) {
             bookCopy.printDetails();
         }
         System.out.println();

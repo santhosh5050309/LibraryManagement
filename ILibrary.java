@@ -1,31 +1,31 @@
-import java.awt.print.Book;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public interface ILibrary {
-     void addBook(int book_id, String title, ArrayList<String> authors,
-                        ArrayList<String> publishers, ArrayList<Integer> book_copy_ids);
+    void addBook(Integer book_id, String title, List<String> authors,
+                 List<String> publishers, List<Integer> book_copy_ids) throws Exception;
 
-     void removeBookCopy(int book_copy_id);
+    /*
+    void removeBookCopy(Integer book_copy_id); */
 
-     void borrowBook(int book_id, int user_id, Date date);
+    void borrowBook(Integer book_id, Integer user_id, Date date) throws Exception;
 
-     void borrowBookCopy(int book_copy_id, int user_id, Date date);
+    void borrowBookCopy(Integer book_copy_id, Integer user_id, Date date) throws Exception;
 
-     void returnBookCopy(int user_id,int book_copy_id);
+    void returnBookCopy(Integer user_id, Integer book_copy_id);
 
-     void printBorrowed(int user_id);
+    void printBorrowed(Integer user_id);
 
-     void searchByBookCopyId(int book_copy_id);
+    void searchByBookCopyId(Integer book_copy_id);
 
-     void searchByBookId(int book_id);
+    void searchByBookId(Integer book_id);
 
-     void searchByTitle(String title);
+    void searchByTitle(String title);
 
-     void searchByAuthors(ArrayList<String> authors);
+    void searchByAuthors(List<String> authors);
 
-     void searchByPublishers(ArrayList<String>publishers);
+    void searchByPublishers(List<String> publishers);
 
-     void searchByDueDate(int user_id,Date date);
+    void searchByDueDate(Integer user_id, Date date);
 
 }
