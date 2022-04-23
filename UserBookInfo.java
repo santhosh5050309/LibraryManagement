@@ -1,37 +1,38 @@
-import java.util.*;
+import java.util.Date;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class UserBookInfo {
-    private int numberOfBooks;
-    public TreeMap<Integer, Date> mapOfBooksDueDate;
+    private Integer numberOfBooks = 0;
+    private Map<BookCopy, Date> mapOfBooksDueDate = new TreeMap<>();
 
-    public UserBookInfo()
-    {
-        numberOfBooks=0;
-        mapOfBooksDueDate = new TreeMap<>();
+    public UserBookInfo() {
     }
 
-    public int getNumberOfBooks()
-    {
+    public UserBookInfo(Integer numberOfBooks, Map<BookCopy, Date> mapOfBooksDueDate) {
+        this.numberOfBooks = numberOfBooks;
+        this.mapOfBooksDueDate = mapOfBooksDueDate;
+    }
+
+    public Integer getNumberOfBooks() {
         return numberOfBooks;
     }
 
-    public void addBook(int book_copy_id,Date date)
-    {
-        mapOfBooksDueDate.put(book_copy_id,date);
+    public void addBook(BookCopy bookCopy, Date date) {
+        mapOfBooksDueDate.put(bookCopy, date);
         numberOfBooks++;
     }
 
-    public void returnBook(int book_copy_id)
-    {
-        mapOfBooksDueDate.remove(book_copy_id);
+    public void returnBook(BookCopy bookCopy) {
+        mapOfBooksDueDate.remove(bookCopy);
         numberOfBooks--;
     }
 
-    public void printBorrowedBooks()
-    {
-        for (Map.Entry<Integer,Date> entry : mapOfBooksDueDate.entrySet())
-        {
-            System.out.println("BookCopy: " + entry.getKey() + ",Due Date: "+ entry.getValue());
-        }
+    public void printBorrowedBooks() {
+        mapOfBooksDueDate.forEach((key, value) -> System.out.println("BookCopy: " + key + ",Due Date: " + value));
+    }
+
+    public Map<BookCopy, Date> getMapOfBooksDueDate() {
+        return mapOfBooksDueDate;
     }
 }

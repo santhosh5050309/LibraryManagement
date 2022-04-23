@@ -1,22 +1,21 @@
 import java.util.ArrayList;
+import java.util.List;
 
 public class LibraryManagementImpl implements ILibraryManagement {
 
-    private ArrayList<ILibrary> libraryList;
-    public LibraryManagementImpl()
-    {
-        libraryList = new ArrayList<>();
-    }
+    private final List<ILibrary> libraryList = new ArrayList<>();
+
+    public LibraryManagementImpl() {}
 
     @Override
-    public ILibrary createLibrary(int size) {
-        ILibrary library = new Library(size);
+    public ILibrary createLibrary(Integer numRacks, Integer rackCapacity) {
+        ILibrary library = new Library(numRacks, rackCapacity);
         libraryList.add(library);
         return library;
     }
 
     @Override
-    public ILibrary getLibrary(int index) {
+    public ILibrary getLibrary(Integer index) {
         return libraryList.get(index);
     }
 }

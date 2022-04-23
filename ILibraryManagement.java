@@ -1,8 +1,7 @@
-import com.sun.org.apache.xerces.internal.impl.io.UCSReader;
-
 public interface ILibraryManagement {
-    public ILibrary createLibrary(int size);
-    public ILibrary getLibrary(int index);
+    public ILibrary createLibrary(Integer numRacks, Integer rackCapacity);
+
+    public ILibrary getLibrary(Integer index);
 }
 
 

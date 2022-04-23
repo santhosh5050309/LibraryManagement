@@ -1,68 +1,73 @@
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
+//ThreadSafe
 public class Book {
-    public int book_id;
-    public String title;
-    public ArrayList<String>authors;
-    public ArrayList<String>publishers;
+    private final Integer book_id;
+    private final String title;
+    private final List<String> authors;
+    private final List<String> publishers;
+    private Map<Integer, BookCopy> bookCopies = new HashMap<>();
+    private final StringBuilder stringBuilder = new StringBuilder();
 
-    public Book(int book_id, String title, ArrayList<String> authors, ArrayList<String> publishers)
-    {
+    public Book(Integer book_id, String title, List<String> authors, List<String> publishers) {
         this.book_id = book_id;
         this.title = title;
         this.authors = authors;
         this.publishers = publishers;
-        authors = new ArrayList<>();
-        publishers = new ArrayList<>();
     }
 
-    public void printDetails()
-    {
-        System.out.println("BookId:"+book_id);
-        System.out.println("Authors: ");
-        for(String author: authors)
-        {
-            System.out.print(author+" ");
+    public void printDetails() {
+        stringBuilder.setLength(0);
+        stringBuilder.append("BookId:").append(book_id).append("Authors: ");;
+        for (String author : authors) {
+            stringBuilder.append(author).append(" ");
         }
-        System.out.println();
-        for(String publisher: publishers)
-        {
-            System.out.print(publisher+" ");
+        stringBuilder.append("\n");
+        for (String publisher : publishers) {
+            stringBuilder.append(publisher).append(" ");
         }
+        System.out.println(stringBuilder.toString());
+        bookCopies.forEach((integer, bookCopy) -> bookCopy.printDetails());
     }
 
-    public Boolean searchByAuthors(ArrayList<String> authors)
-    {
-        for(String author : authors)
-        {
-            if(!this.authors.contains(author))
-            {
+    public Boolean searchByAuthors(List<String> authors) {
+        return generalSearch(authors, this.authors);
+    }
+
+    public Boolean searchByPublishers(List<String> publishers) {
+        return generalSearch(publishers, this.publishers);
+    }
+
+    public Boolean searchByTitle(String title) {
+        return generalSearch(Collections.singletonList(title),
+                Collections.singletonList(this.title));
+    }
+
+    public void addBookCopy(Integer book_id, Integer book_copy_id, Integer rack_id) {
+        this.bookCopies.put(book_copy_id, new BookCopy(book_id, book_copy_id, rack_id, true));
+    }
+
+    public Map<Integer, BookCopy> getBookCopies() {
+        return bookCopies;
+    }
+
+    public Integer getBook_id() {
+        return book_id;
+    }
+
+    private Boolean generalSearch(List<String> query, List<String> field) {
+        for (String string : field) {
+            if (!query.contains(string)) {
                 return false;
             }
         }
         return true;
     }
-
-
-    public Boolean searchByPublishers(ArrayList<String> publishers)
-    {
-        for(String publisher : publishers)
-        {
-            if(!this.publishers.contains(publisher))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public Boolean searchByTitle(String title)
-    {
-        return this.title.equals(title);
-    }
-
-
 
 }
